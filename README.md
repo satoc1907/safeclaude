@@ -1,49 +1,49 @@
 # SafeClaude
 
-Docker上でClaude Codeを安全に実行するツール。ホストマシンへのアクセスを最小限に制限し、指定したワーキングディレクトリのみ書き込み可能。
+Run Claude Code safely inside Docker. Restrict host access to a minimum — only the designated workspace directory is writable.
 
-## インストール
+## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/shi3z/safeclaude/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/shi3z/safeclaude/master/install.sh | bash
 ```
 
-## 必要なもの
+## Requirements
 
 - Docker
-- `ANTHROPIC_API_KEY` 環境変数
+- `ANTHROPIC_API_KEY` environment variable
 
-## 使い方
+## Usage
 
 ```bash
-# カレントディレクトリで起動
+# Start in current directory
 safeclaude
 
-# 特定のプロジェクトで起動
+# Start in a specific project directory
 safeclaude ~/projects/myapp
 
-# 他のディレクトリを読み取り専用で追加
+# Add read-only directories
 safeclaude ~/projects/myapp -r ~/projects/shared-lib -r ~/data
 ```
 
-## セキュリティモデル
+## Security Model
 
-| 対象 | コンテナ内パス | 権限 |
+| Target | Container Path | Permission |
 |---|---|---|
-| ワーキングディレクトリ | `/workspace` | 読み書き可 |
-| `-r` で指定したディレクトリ | `/readonly/<name>` | 読み取り専用 |
-| その他のホストファイル | マウントしない | アクセス不可 |
+| Workspace directory | `/workspace` | Read-Write |
+| Directories specified with `-r` | `/readonly/<name>` | Read-Only |
+| All other host files | Not mounted | No access |
 
-- ホスト全体をマウントしないため、情報漏洩リスクを最小化
-- ネットワークは有効（pip install等に必要）だが、送れる情報を制限
-- Claude Codeはコンテナ内で `--dangerously-skip-permissions` で動作
+- Host filesystem is **not** mounted by default, minimizing data leakage risk
+- Network is enabled (needed for pip install, npm install, etc.) but accessible data is restricted
+- Claude Code runs with `--dangerously-skip-permissions` inside the container
 
-## オプション
+## Options
 
 ```
--b, --build     Dockerイメージを強制再ビルド
--r, --ro-dir    読み取り専用ディレクトリを追加 (複数指定可)
--h, --help      ヘルプ表示
+-b, --build     Force rebuild Docker image
+-r, --ro-dir    Add read-only directory (can be specified multiple times)
+-h, --help      Show help
 ```
 
 ## License
