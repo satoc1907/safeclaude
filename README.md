@@ -1,5 +1,8 @@
 # SafeClaude
 
+> [!CAUTION]
+> This software is provided "as is", without warranty of any kind. The authors assume no responsibility for any damage, data loss, or security incidents caused by the use of this tool. Use entirely at your own risk.
+
 Run Claude Code safely inside Docker. Restrict host access to a minimum — only the designated workspace directory is writable.
 
 ## Install
@@ -45,11 +48,6 @@ safeclaude ~/projects/myapp -r ~/projects/shared-lib -r ~/data
 -r, --ro-dir    Add read-only directory (can be specified multiple times)
 -h, --help      Show help
 ```
-
-## Disclaimer
-
-> [!CAUTION]
-> This software is provided "as is", without warranty of any kind. The authors assume no responsibility for any damage, data loss, or security incidents caused by the use of this tool. Use entirely at your own risk.
 
 ## License
 
