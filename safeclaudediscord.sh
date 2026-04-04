@@ -1,7 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# シンボリックリンクを解決して実際のスクリプトの場所を取得
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 IMAGE_NAME="safeclaudediscord"
 CONTAINER_NAME="safeclaude-$$"
 
@@ -123,7 +130,7 @@ fi
 # Run container
 exec docker run \
     --rm \
-    -t \
+    -it \
     --name "$CONTAINER_NAME" \
     "${MOUNT_OPTS[@]}" \
     ${ENV_OPTS[@]+"${ENV_OPTS[@]}"} \
