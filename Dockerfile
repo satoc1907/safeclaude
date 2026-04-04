@@ -1,29 +1,30 @@
 FROM node:22-slim
 
-# Install basic tools + unzip (Bun installer needs it)
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    vim \
-    ripgrep \
-    unzip \
+    git curl vim ripgrep unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code globally
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install Bun (required for Claude Code Channels plugins)
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:$PATH"
 
-# Create non-root user
 RUN useradd -m -s /bin/bash claude
-
-# Create mount points
 RUN mkdir -p /host /workspace && chown claude:claude /workspace
 
 USER claude
 ENV PATH="/home/claude/.bun/bin:$PATH"
+
+# プラグインをイメージ内に焼き込む
+RUN mkdir -p /home/claude/.claude/plugins/marketplaces && \
+    git clone https://github.com/anthropics/claude-plugins-official.git \
+    /home/claude/.claude/plugins/marketplaces/claude-plugins-official
+
+RUN echo '{"claude-plugins-official":{"url":"https://github.com/anthropics/claude-plugins-official","installLocation":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official"}}' \
+    > /home/claude/.claude/plugins/known_marketplaces.json
+
+RUN echo '[{"name":"discord","marketplace":"claude-plugins-official","scope":"user","installLocation":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/discord"}]' \
+    > /home/claude/.claude/plugins/installed_plugins.json
 
 WORKDIR /workspace
 
