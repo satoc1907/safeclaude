@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-INSTALL_DIR="$HOME/.safeclaude"
-REPO_URL="https://github.com/shi3z/safeclaude.git"
+INSTALL_DIR="$HOME/.safeclaudediscord"                          # ① 変更
+REPO_URL="https://github.com/satoc1907/safeclaude.git" # ② 変更
 
-echo "=== SafeClaude Installer ==="
+echo "=== SafeClaude Discord Installer ==="                     # ③ 変更
 
 # Check dependencies
 if ! command -v docker &>/dev/null; then
@@ -28,21 +28,21 @@ fi
 
 # Build Docker image
 echo "Dockerイメージをビルド中..."
-docker build -t safeclaude "$INSTALL_DIR"
+docker build -t safeclaudediscord "$INSTALL_DIR"               # ④ 変更
 
 # Install command to PATH
-LINK_PATH="/usr/local/bin/safeclaude"
+LINK_PATH="/usr/local/bin/safeclaudediscord"                   # ⑤ 変更
 if [[ -w /usr/local/bin ]]; then
-    ln -sf "$INSTALL_DIR/safeclaude.sh" "$LINK_PATH"
+    ln -sf "$INSTALL_DIR/safeclaudediscord.sh" "$LINK_PATH"    # ⑥ 変更
 else
     echo "シンボリックリンクの作成に sudo が必要です..."
-    sudo ln -sf "$INSTALL_DIR/safeclaude.sh" "$LINK_PATH"
+    sudo ln -sf "$INSTALL_DIR/safeclaudediscord.sh" "$LINK_PATH" # ⑦ 変更
 fi
 
 echo ""
 echo "インストール完了!"
-echo "使い方: safeclaude [ワーキングディレクトリ]"
+echo "使い方: safeclaudediscord [ワーキングディレクトリ]"        # ⑧ 変更
 echo ""
 echo "例:"
-echo "  safeclaude                    # カレントディレクトリで起動"
-echo "  safeclaude ~/projects/myapp   # 指定ディレクトリで起動"
+echo "  safeclaudediscord                    # カレントディレクトリで起動"
+echo "  safeclaudediscord ~/projects/myapp   # 指定ディレクトリで起動"

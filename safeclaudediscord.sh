@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-IMAGE_NAME="safeclaude"
+IMAGE_NAME="safeclaudediscord"
 CONTAINER_NAME="safeclaude-$$"
 
 # Usage
@@ -123,7 +123,7 @@ fi
 # Run container
 exec docker run \
     --rm \
-    -it \
+    -t \
     --name "$CONTAINER_NAME" \
     "${MOUNT_OPTS[@]}" \
     ${ENV_OPTS[@]+"${ENV_OPTS[@]}"} \
