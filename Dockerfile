@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN npm install -g @anthropic-ai/claude-code
 
-RUN curl -fsSL https://bun.sh/install | bash
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash
 ENV PATH="/root/.bun/bin:$PATH"
 
 RUN useradd -m -s /bin/bash claude
