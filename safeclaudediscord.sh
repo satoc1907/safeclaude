@@ -126,6 +126,10 @@ CONFIG_MOUNTS=()
 if [[ -d "$HOME/.claude" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude:/home/claude/.claude")
 fi
+# .claude.json を別途マウント
+if [[ -f "$HOME/.claude.json" ]]; then
+    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/home/claude/.claude.json")
+fi
 
 # Run container
 exec docker run \
