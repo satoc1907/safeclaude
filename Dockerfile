@@ -33,5 +33,6 @@ RUN echo '[{"name":"discord","marketplace":"claude-plugins-official","scope":"us
 
 WORKDIR /workspace
 
-ENTRYPOINT ["claude", "--dangerously-skip-permissions", \
-            "--channels", "plugin:discord@claude-plugins-official"]
+# 変更後
+CMD ["claude", "--dangerously-skip-permissions", \
+     "--channels", "plugin:discord@claude-plugins-official"]
