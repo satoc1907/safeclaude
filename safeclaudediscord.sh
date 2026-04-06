@@ -148,6 +148,6 @@ exec docker run \
     -it \
     --name "$CONTAINER_NAME" \
     "${MOUNT_OPTS[@]}" \
-    "${ENV_OPTS[@]}" \
-    "${CONFIG_MOUNTS[@]}" \
+    ${ENV_OPTS[@]:+"${ENV_OPTS[@]}"} \
+    ${CONFIG_MOUNTS[@]:+"${CONFIG_MOUNTS[@]}"} \
     "$IMAGE_NAME"
