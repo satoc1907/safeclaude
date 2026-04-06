@@ -85,7 +85,7 @@ WORKSPACE_DIR="$(cd "$WORKSPACE_DIR" 2>/dev/null && pwd)" || {
 
 echo "=== SafeClaude ==="
 echo "  Workspace (読み書き可): $WORKSPACE_DIR"
-if [[ ${#EXTRA_RO_MOUNTS[@]+"${#EXTRA_RO_MOUNTS[@]}"} -gt 0 ]]; then
+if [[ ${#EXTRA_RO_MOUNTS[@]} -gt 0 ]]; then
     for d in "${EXTRA_RO_MOUNTS[@]}"; do
         echo "  ReadOnly: $d"
     done
