@@ -13,6 +13,11 @@ RUN useradd -m -s /bin/bash claude
 RUN mkdir -p /host /workspace && chown claude:claude /workspace
 
 USER claude
+
+# /home/claude/.bun/bin/bun -> /usr/local/bin/bun へのシンボリックリンクを作成
+RUN mkdir -p /home/claude/.bun/bin && \
+    ln -sf /usr/local/bin/bun /home/claude/.bun/bin/bun
+
 ENV PATH="/home/claude/.bun/bin:$PATH"
 
 # プラグインをイメージ内に焼き込む
