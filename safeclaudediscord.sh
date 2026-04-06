@@ -122,9 +122,20 @@ if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
 fi
 
 # Pass through Claude config if it exists
+# pluginsはコンテナ内で管理するためマウントから除外
 CONFIG_MOUNTS=()
 if [[ -d "$HOME/.claude" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude:/home/claude/.claude")
+    for item in "$HOME/.claude"/*/; do
+        dirname=$(basename "$item")
+        if [[ "$dirname" != "plugins" ]]; then
+            CONFIG_MOUNTS+=(-v "$item:/home/claude/.claude/$dirname")
+        fi
+    done
+    for item in "$HOME/.claude"/.*; do
+        [[ -e "$item" ]] || continue
+        filename=$(basename "$item")
+        CONFIG_MOUNTS+=(-v "$item:/home/claude/.claude/$filename")
+    done
 fi
 # .claude.json を別途マウント
 if [[ -f "$HOME/.claude.json" ]]; then
