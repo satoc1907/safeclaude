@@ -143,7 +143,7 @@ if [[ -f "$HOME/.claude.json" ]]; then
 fi
 
 # Run container
-exec docker run \
+docker run \
     --rm \
     -it \
     --name "$CONTAINER_NAME" \
