@@ -106,7 +106,7 @@ MOUNT_OPTS=(
 )
 
 # Add read-only mounts (only explicitly specified directories)
-for ro_dir in "${EXTRA_RO_MOUNTS[@]}"; do
+for ro_dir in "${EXTRA_RO_MOUNTS[@]:-}"; do
     abs_ro="$(cd "$ro_dir" 2>/dev/null && pwd)" || {
         echo "Warning: 読み取り専用ディレクトリが見つかりません: $ro_dir" >&2
         continue
