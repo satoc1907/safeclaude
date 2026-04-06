@@ -28,7 +28,7 @@ RUN mkdir -p /home/claude/.claude/plugins/marketplaces && \
 RUN echo '{"claude-plugins-official":{"url":"https://github.com/anthropics/claude-plugins-official","installLocation":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official"}}' \
     > /home/claude/.claude/plugins/known_marketplaces.json
 
-RUN echo '[{"name":"discord","marketplace":"claude-plugins-official","scope":"user","installLocation":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/discord"}]' \
+RUN echo '{"version":2,"plugins":{"discord@claude-plugins-official":[{"scope":"user","installPath":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/discord","version":"0.0.4","installedAt":"2026-01-01T00:00:00.000Z","lastUpdated":"2026-01-01T00:00:00.000Z"}]}}' \
     > /home/claude/.claude/plugins/installed_plugins.json
 
 WORKDIR /workspace
