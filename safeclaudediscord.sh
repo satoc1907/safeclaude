@@ -117,9 +117,9 @@ done
 
 # Pass through API key
 ENV_OPTS=()
-if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
-fi
+#if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+#   ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
+#fi
 
 # Pass through Claude config if it exists
 # pluginsはコンテナ内で管理するためマウントから除外
@@ -136,12 +136,14 @@ if [[ -f "$HOME/.claude/settings.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
 fi
 if [[ -d "$HOME/.claude/channels" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels:ro")
+    CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
 fi
 if [[ -f "$HOME/.claude.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/home/claude/.claude.json:ro")
+    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/home/claude/.claude.json")
 fi
 
+#set -x
+#if [ -t 0 ]; then echo "stdin=TTY"; else echo "stdin=NOT TTY"; fi
 # Run container
 docker run \
     --rm \
