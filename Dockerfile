@@ -34,5 +34,5 @@ RUN echo '{"version":2,"plugins":{"discord@claude-plugins-official":[{"scope":"u
 WORKDIR /workspace
 
 # 変更後
-CMD ["claude", "--dangerously-skip-permissions", \
+ENTRYPOINT ["claude", "--dangerously-skip-permissions", \
      "--channels", "plugin:discord@claude-plugins-official"]

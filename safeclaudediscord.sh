@@ -145,7 +145,7 @@ fi
 #set -x
 #if [ -t 0 ]; then echo "stdin=TTY"; else echo "stdin=NOT TTY"; fi
 # Run container
-docker run \
+exec docker run \
     --rm \
     -it \
     --name "$CONTAINER_NAME" \
