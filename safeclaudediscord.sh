@@ -127,7 +127,7 @@ ENV_OPTS=()
 CONFIG_MOUNTS=()
 # 認証情報のみ明示的にマウント
 if [[ -f "$HOME/.claude/.credentials.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/.credentials.json:/home/claude/.claude/.credentials.json:ro")
+    CONFIG_MOUNTS+=(-v "$HOME/.claude/.credentials.json:/home/claude/.claude/.credentials.json")
 fi
 if [[ -f "$HOME/.claude/config.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/config.json:/home/claude/.claude/config.json:ro")
