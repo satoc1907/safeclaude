@@ -16,6 +16,10 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uvx /usr/local/bin/
 
 RUN useradd -m -s /bin/bash claude
+
+#For DGX Spark(Linux) setting
+#RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 1000 claude
+
 RUN mkdir -p /host /workspace && chown claude:claude /workspace
 
 USER claude
