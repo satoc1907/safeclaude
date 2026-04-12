@@ -2,12 +2,18 @@ FROM node:22-slim
 
 RUN apt-get update && apt-get install -y \
     git curl vim ripgrep unzip \
+    build-essential cmake \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g @anthropic-ai/claude-code
 
 RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash
 ENV PATH="/root/.bun/bin:$PATH"
+
+# uv をインストール
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    cp /root/.local/bin/uv /usr/local/bin/ && \
+    cp /root/.local/bin/uvx /usr/local/bin/
 
 RUN useradd -m -s /bin/bash claude
 RUN mkdir -p /host /workspace && chown claude:claude /workspace
