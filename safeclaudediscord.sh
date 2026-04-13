@@ -121,6 +121,11 @@ ENV_OPTS=()
 #   ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
 #fi
 
+# .credentials.json がなければ空ファイルを作成（コンテナ内のログイン結果を永続化するため）
+if [[ ! -f "$HOME/.claude/.credentials.json" ]]; then
+    touch "$HOME/.claude/.credentials.json"
+fi
+
 # Pass through Claude config if it exists
 # pluginsはコンテナ内で管理するためマウントから除外
 # Pass through Claude config if it exists
