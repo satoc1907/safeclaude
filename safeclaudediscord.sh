@@ -121,6 +121,11 @@ ENV_OPTS=()
 #   ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
 #fi
 
+# .credentials.json がなければ空ファイルを作成（コンテナ内のログイン結果を永続化するため）
+if [[ ! -f "$HOME/.claude/.credentials.json" ]]; then
+    touch "$HOME/.claude/.credentials.json"
+fi
+
 # Pass through Claude config if it exists
 # pluginsはコンテナ内で管理するためマウントから除外
 # Pass through Claude config if it exists
@@ -138,8 +143,13 @@ fi
 if [[ -d "$HOME/.claude/channels" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
 fi
+#if [[ -f "$HOME/.claude.json" ]]; then
+#    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/home/claude/.claude.json:ro")
+#fi
+
+# 変更後: 一時パスにread-onlyでマウント（entrypoint.shがフィルタして配置）
 if [[ -f "$HOME/.claude.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/home/claude/.claude.json")
+    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/tmp/.claude.json.host:ro")
 fi
 
 #set -x
@@ -148,6 +158,7 @@ fi
 exec docker run \
     --rm \
     -it \
+    --init \
     --name "$CONTAINER_NAME" \
     "${MOUNT_OPTS[@]}" \
     ${ENV_OPTS[@]:+"${ENV_OPTS[@]}"} \
