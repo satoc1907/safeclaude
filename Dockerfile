@@ -15,13 +15,24 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uv /usr/local/bin/ && \
     cp /root/.local/bin/uvx /usr/local/bin/
 
-#RUN useradd -m -s /bin/bash claude
-
 #For DGX Spark(Linux) setting
 #RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 1000 claude
 #For Mac setting
-#For DGX Spark(Linux) setting
 RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 501 claude
+
+# entrypoint スクリプトを直接生成
+# .claude.json からホスト固有の情報(projects, githubRepoPaths)を除去してから起動する
+RUN printf '#!/bin/bash\n\
+if [ -f /tmp/.claude.json.host ]; then\n\
+  node -e "\n\
+    const data = JSON.parse(require(\"fs\").readFileSync(\"/tmp/.claude.json.host\", \"utf8\"));\n\
+    delete data.projects;\n\
+    delete data.githubRepoPaths;\n\
+    require(\"fs\").writeFileSync(\"/home/claude/.claude.json\", JSON.stringify(data, null, 2));\n\
+  " 2>/dev/null || cp /tmp/.claude.json.host /home/claude/.claude.json\n\
+fi\n\
+exec claude --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official\n' \
+    > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 RUN mkdir -p /host /workspace && chown claude:claude /workspace
 
@@ -46,7 +57,4 @@ RUN echo '{"version":2,"plugins":{"discord@claude-plugins-official":[{"scope":"u
 
 WORKDIR /workspace
 
-# 変更後
-#ENTRYPOINT ["claude", "--dangerously-skip-permissions", \
-#     "--channels", "plugin:discord@claude-plugins-official"]
-ENTRYPOINT ["script", "-c", "claude --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official", "/dev/null"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

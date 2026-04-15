@@ -128,7 +128,6 @@ fi
 
 # Pass through Claude config if it exists
 # pluginsはコンテナ内で管理するためマウントから除外
-# Pass through Claude config if it exists
 CONFIG_MOUNTS=()
 # 認証情報のみ明示的にマウント
 if [[ -f "$HOME/.claude/.credentials.json" ]]; then
@@ -143,12 +142,12 @@ fi
 if [[ -d "$HOME/.claude/channels" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
 fi
+# .claude.json は直接マウントするとホスト固有パス情報でClaude Codeの起動がブロックされるため、
+# 一時パスにread-onlyでマウントし、entrypoint.sh がフィルタしてからコピーする
 if [[ -f "$HOME/.claude.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/home/claude/.claude.json")
+    CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/tmp/.claude.json.host:ro")
 fi
 
-#set -x
-#if [ -t 0 ]; then echo "stdin=TTY"; else echo "stdin=NOT TTY"; fi
 # Run container
 exec docker run \
     --rm \
