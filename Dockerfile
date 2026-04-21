@@ -27,6 +27,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 501 claude
 
 # entrypoint スクリプトを直接生成
+# - .claude.json からホスト固有の情報を除去
+# - CLAUDE_CONTINUE=1 なら -c フラグを追加して前回セッションを再開
 RUN printf '#!/bin/bash\n\
 if [ -f /tmp/.claude.json.host ]; then\n\
   node -e "\n\
@@ -36,8 +38,15 @@ if [ -f /tmp/.claude.json.host ]; then\n\
     require(\"fs\").writeFileSync(\"/home/claude/.claude.json\", JSON.stringify(data, null, 2));\n\
   " 2>/dev/null || cp /tmp/.claude.json.host /home/claude/.claude.json\n\
 fi\n\
-exec claude --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official\n' \
+CONTINUE_FLAG=""\n\
+if [ "${CLAUDE_CONTINUE:-}" = "1" ]; then\n\
+  CONTINUE_FLAG="-c"\n\
+fi\n\
+exec claude $CONTINUE_FLAG --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official\n' \
     > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+
+# rtk テレメトリ無効化
+ENV RTK_TELEMETRY_DISABLED=1
 
 RUN mkdir -p /host /workspace && chown claude:claude /workspace
 
