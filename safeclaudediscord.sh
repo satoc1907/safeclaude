@@ -25,12 +25,15 @@ Arguments:
 
 Options:
   -b, --build     Dockerイメージを強制的に再ビルド
+  -c, --continue  前回のセッションを再開（claude -c 相当）
   -r, --ro-dir    追加の読み取り専用マウント (複数指定可)
   -h, --help      このヘルプを表示
 
 Examples:
-  $(basename "$0")                          # カレントディレクトリで起動
+  $(basename "$0")                          # カレントディレクトリで起動（新規セッション）
+  $(basename "$0") -c                       # 前回のセッションを再開
   $(basename "$0") ~/projects/myapp         # 指定ディレクトリで起動
+  $(basename "$0") -c ~/projects/myapp      # 指定ディレクトリで前回セッション再開
   $(basename "$0") -b ~/projects/myapp      # イメージ再ビルドして起動
 
 Security:
@@ -45,6 +48,7 @@ EOF
 
 # Parse arguments
 FORCE_BUILD=false
+CONTINUE_SESSION=false
 EXTRA_RO_MOUNTS=()
 WORKSPACE_DIR=""
 
@@ -52,6 +56,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -b|--build)
             FORCE_BUILD=true
+            shift
+            ;;
+        -c|--continue)
+            CONTINUE_SESSION=true
             shift
             ;;
         -r|--ro-dir)
@@ -85,6 +93,9 @@ WORKSPACE_DIR="$(cd "$WORKSPACE_DIR" 2>/dev/null && pwd)" || {
 
 echo "=== SafeClaude ==="
 echo "  Workspace (読み書き可): $WORKSPACE_DIR"
+if [[ "$CONTINUE_SESSION" == true ]]; then
+    echo "  Mode: 前回セッション再開 (-c)"
+fi
 if [[ ${#EXTRA_RO_MOUNTS[@]} -gt 0 ]]; then
     for d in "${EXTRA_RO_MOUNTS[@]}"; do
         echo "  ReadOnly: $d"
@@ -121,6 +132,11 @@ ENV_OPTS=()
 #   ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
 #fi
 
+# -c オプション: 前回セッション再開
+if [[ "$CONTINUE_SESSION" == true ]]; then
+    ENV_OPTS+=(-e "CLAUDE_CONTINUE=1")
+fi
+
 # .credentials.json がなければ空ファイルを作成（コンテナ内のログイン結果を永続化するため）
 if [[ ! -f "$HOME/.claude/.credentials.json" ]]; then
     touch "$HOME/.claude/.credentials.json"
@@ -147,6 +163,9 @@ fi
 if [[ -f "$HOME/.claude.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/tmp/.claude.json.host:ro")
 fi
+# 会話履歴の永続化（-c による再開に必要）
+mkdir -p "$HOME/.claude/projects"
+CONFIG_MOUNTS+=(-v "$HOME/.claude/projects:/home/claude/.claude/projects")
 
 # Run container
 exec docker run \
