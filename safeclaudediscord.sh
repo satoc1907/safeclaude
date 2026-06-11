@@ -155,6 +155,11 @@ fi
 if [[ -f "$HOME/.claude/settings.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
 fi
+# STATUS.md 更新規約をユーザーメモリとして注入（全セッション共通）
+if [[ -f "$SCRIPT_DIR/claude-global.md" ]]; then
+    CONFIG_MOUNTS+=(-v "$SCRIPT_DIR/claude-global.md:/home/claude/.claude/CLAUDE.md:ro")
+fi
+
 if [[ -d "$HOME/.claude/channels" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
 fi
