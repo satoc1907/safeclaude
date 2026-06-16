@@ -93,6 +93,7 @@ WORKSPACE_DIR="$(cd "$WORKSPACE_DIR" 2>/dev/null && pwd)" || {
 
 echo "=== SafeClaude ==="
 echo "  Workspace (読み書き可): $WORKSPACE_DIR"
+echo "  Memory (会話履歴): $WORKSPACE_DIR/.claude-memory"
 if [[ "$CONTINUE_SESSION" == true ]]; then
     echo "  Mode: 前回セッション再開 (-c)"
 fi
@@ -155,6 +156,11 @@ fi
 if [[ -f "$HOME/.claude/settings.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
 fi
+# STATUS.md 更新規約をユーザーメモリとして注入（全セッション共通）
+if [[ -f "$SCRIPT_DIR/claude-global.md" ]]; then
+    CONFIG_MOUNTS+=(-v "$SCRIPT_DIR/claude-global.md:/home/claude/.claude/CLAUDE.md:ro")
+fi
+
 if [[ -d "$HOME/.claude/channels" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
 fi
@@ -164,8 +170,12 @@ if [[ -f "$HOME/.claude.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude.json:/tmp/.claude.json.host:ro")
 fi
 # 会話履歴の永続化（-c による再開に必要）
-mkdir -p "$HOME/.claude/projects"
-CONFIG_MOUNTS+=(-v "$HOME/.claude/projects:/home/claude/.claude/projects")
+# ワークスペース直下の .claude-memory に保存し、別マシン（MacBook / DGX Spark など）で
+# 同じワークスペースを開けば履歴を引き継げるようにする。
+# Dropbox/git 等での同期を前提とし、各マシンの safeclaudediscord.sh を揃えること。
+MEMORY_DIR="$WORKSPACE_DIR/.claude-memory"
+mkdir -p "$MEMORY_DIR"
+CONFIG_MOUNTS+=(-v "$MEMORY_DIR:/home/claude/.claude/projects")
 
 # Run container
 exec docker run \
