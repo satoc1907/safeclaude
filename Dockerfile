@@ -3,11 +3,19 @@ FROM rust:alpine AS rtk-builder
 RUN apk add --no-cache musl-dev
 RUN cargo install --git https://github.com/rtk-ai/rtk
 
-# ---- ステージ2: 本体 (node:22-slim = Bookwormのまま) ----
-FROM node:22-slim
+# ---- Node供給用 donor ステージ ----
+FROM node:22-slim AS node-donor
+
+# ---- ステージ2: 本体 (Ubuntu 24.04 = glibc 2.39 / GLIBCXX_3.4.32) ----
+# torch sm_121 wheel は Ubuntu 24.04 向けビルドのため base を揃え、ABI不一致を避ける
+FROM ubuntu:24.04
+
+# Node.js を node 公式イメージから移植（Ubuntu base には Node が無いため）
+# node 公式バイナリは旧glibc向けビルドで、glibc 2.39 上でも前方互換で動作する
+COPY --from=node-donor /usr/local /usr/local
 
 RUN apt-get update && apt-get install -y \
-    git curl vim ripgrep unzip \
+    git curl vim ripgrep unzip ca-certificates \
     build-essential cmake \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,7 +30,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uvx /usr/local/bin/
 
 #For DGX Spark(Linux) setting
-RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 1000 claude
+# Ubuntu 24.04 は uid1000 の ubuntu ユーザーを標準搭載するため、先に削除して衝突を回避
+RUN userdel -r ubuntu 2>/dev/null; userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 1000 claude
 #For Mac setting
 #RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 501 claude
 
