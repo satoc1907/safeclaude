@@ -27,6 +27,8 @@ Options:
   -b, --build     Dockerイメージを強制的に再ビルド
   -c, --continue  前回のセッションを再開（claude -c 相当）
   -r, --ro-dir    追加の読み取り専用マウント (複数指定可)
+  -g, --gpus      GPUをコンテナに渡す (docker run --gpus all / NVIDIA Container Toolkit必要)
+      --boltz     Boltz-2実行環境を永続マウント (~/.boltz, ~/venvs/boltz2-spark, CUDA toolkit)
   -h, --help      このヘルプを表示
 
 Examples:
@@ -49,6 +51,8 @@ EOF
 # Parse arguments
 FORCE_BUILD=false
 CONTINUE_SESSION=false
+USE_GPU=false
+MOUNT_BOLTZ=false
 EXTRA_RO_MOUNTS=()
 WORKSPACE_DIR=""
 
@@ -65,6 +69,14 @@ while [[ $# -gt 0 ]]; do
         -r|--ro-dir)
             EXTRA_RO_MOUNTS+=("$2")
             shift 2
+            ;;
+        -g|--gpus)
+            USE_GPU=true
+            shift
+            ;;
+        --boltz)
+            MOUNT_BOLTZ=true
+            shift
             ;;
         -h|--help)
             usage
@@ -177,11 +189,49 @@ MEMORY_DIR="$WORKSPACE_DIR/.claude-memory"
 mkdir -p "$MEMORY_DIR"
 CONFIG_MOUNTS+=(-v "$MEMORY_DIR:/home/claude/.claude/projects")
 
+# GPU pass-through (opt-in)。NVIDIA Container Toolkit がホストに必要。
+GPU_OPTS=()
+if [[ "$USE_GPU" == true ]]; then
+    GPU_OPTS+=(--gpus all)
+    echo "  GPU: 有効 (--gpus all)"
+fi
+
+# Boltz-2 実行環境の永続マウント (opt-in)
+# venv はパス依存があるため、コンテナ内も同一パス /home/claude/venvs/boltz2-spark に合わせる。
+BOLTZ_MOUNTS=()
+if [[ "$MOUNT_BOLTZ" == true ]]; then
+    # モデル重み（読むだけ・7.6GB）
+    if [[ -d "$HOME/.boltz" ]]; then
+        BOLTZ_MOUNTS+=(-v "$HOME/.boltz:/home/claude/.boltz:ro")
+        echo "  Boltz重み: $HOME/.boltz (ro)"
+    else
+        echo "Warning: $HOME/.boltz が見つかりません（初回はコンテナ内でDL要）" >&2
+    fi
+    # venv（読み書き）。無ければスキップ（初回セットアップで作る想定）
+    if [[ -d "$HOME/venvs/boltz2-spark" ]]; then
+        BOLTZ_MOUNTS+=(-v "$HOME/venvs/boltz2-spark:/home/claude/venvs/boltz2-spark:rw")
+        echo "  Boltz venv: $HOME/venvs/boltz2-spark (rw)"
+    else
+        echo "Note: $HOME/venvs/boltz2-spark が未作成。初回セットアップで作成してください。" >&2
+        # 空でもマウントできるよう、ホスト側ディレクトリを用意しておく
+        mkdir -p "$HOME/venvs/boltz2-spark"
+        BOLTZ_MOUNTS+=(-v "$HOME/venvs/boltz2-spark:/home/claude/venvs/boltz2-spark:rw")
+    fi
+    # CUDA toolkit（ptxas 等）。sm_121 の PTX JIT に必須。--gpus はドライバは渡すが
+    # /usr/local/cuda（toolkit本体）は渡さないため、明示的に read-only マウントする。
+    if [[ -d "/usr/local/cuda" ]]; then
+        BOLTZ_MOUNTS+=(-v "/usr/local/cuda:/usr/local/cuda:ro")
+        echo "  CUDA toolkit: /usr/local/cuda (ro)"
+    fi
+fi
+
 # Run container
 exec docker run \
     --rm \
     -it \
     --name "$CONTAINER_NAME" \
+    ${GPU_OPTS[@]:+"${GPU_OPTS[@]}"} \
+    ${BOLTZ_MOUNTS[@]:+"${BOLTZ_MOUNTS[@]}"} \
     "${MOUNT_OPTS[@]}" \
     ${ENV_OPTS[@]:+"${ENV_OPTS[@]}"} \
     ${CONFIG_MOUNTS[@]:+"${CONFIG_MOUNTS[@]}"} \
