@@ -17,6 +17,7 @@ COPY --from=node-donor /usr/local /usr/local
 RUN apt-get update && apt-get install -y \
     git curl vim ripgrep unzip ca-certificates \
     build-essential cmake \
+    libopenblas0 libnuma1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g @anthropic-ai/claude-code
