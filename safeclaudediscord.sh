@@ -107,7 +107,7 @@ echo ""
 # Build image if needed
 if [[ "$FORCE_BUILD" == true ]] || ! docker image inspect "$IMAGE_NAME" &>/dev/null; then
     echo "Dockerイメージをビルド中..."
-    docker build -t "$IMAGE_NAME" "$SCRIPT_DIR"
+    docker build --build-arg CLAUDE_UID="$(id -u)" -t "$IMAGE_NAME" "$SCRIPT_DIR"
     echo ""
 fi
 
@@ -132,6 +132,14 @@ ENV_OPTS=()
 #if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
 #   ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
 #fi
+
+# プロキシ設定の自動引き継ぎ（NCC等プロキシ環境用）
+if [[ -n "${http_proxy:-}${HTTP_PROXY:-}" ]]; then
+    ENV_OPTS+=(-e "http_proxy=${http_proxy:-${HTTP_PROXY:-}}")
+    ENV_OPTS+=(-e "https_proxy=${https_proxy:-${HTTPS_PROXY:-}}")
+    ENV_OPTS+=(-e "HTTP_PROXY=${HTTP_PROXY:-${http_proxy:-}}")
+    ENV_OPTS+=(-e "HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy:-}}")
+fi
 
 # -c オプション: 前回セッション再開
 if [[ "$CONTINUE_SESSION" == true ]]; then
