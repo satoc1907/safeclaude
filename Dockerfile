@@ -85,6 +85,12 @@ COPY --from=rtk-builder /usr/local/cargo/bin/rtk /home/claude/.local/bin/rtk
 ENV PATH="/home/claude/.local/bin:$PATH"
 RUN rtk init -g --auto-patch
 
+# --boltz で /usr/local/cuda:ro をマウントした際、sm_121 wheel が要求する
+# libcudart.so.13 等を手動 export なしで解決できるよう恒久化。
+# CUDA 未マウント（通常起動）時は存在しないパスとなるが、動的リンカは
+# 存在しないディレクトリを単に無視するため無害。
+ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+
 WORKDIR /workspace
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
