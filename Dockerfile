@@ -15,10 +15,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     cp /root/.local/bin/uv /usr/local/bin/ && \
     cp /root/.local/bin/uvx /usr/local/bin/
 
-#For DGX Spark(Linux) setting
-#RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 1000 claude
-#For Mac setting
-RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u 501 claude
+ARG CLAUDE_UID=501
+RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u ${CLAUDE_UID} claude
 
 # entrypoint スクリプトを直接生成
 # - .claude.json からホスト固有の情報を除去
