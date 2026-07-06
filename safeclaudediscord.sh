@@ -26,6 +26,7 @@ Arguments:
 Options:
   -b, --build     Dockerイメージを強制的に再ビルド
   -c, --continue  前回のセッションを再開（claude -c 相当）
+  -e, --env       環境変数をコンテナに渡す (複数指定可、形式: KEY=VALUE)
   -r, --ro-dir    追加の読み取り専用マウント (複数指定可)
   -g, --gpus      GPUをコンテナに渡す (docker run --gpus all / NVIDIA Container Toolkit必要)
       --boltz     Boltz-2実行環境を永続マウント (~/.boltz, ~/venvs/boltz2-spark, CUDA toolkit)
@@ -37,6 +38,7 @@ Examples:
   $(basename "$0") ~/projects/myapp         # 指定ディレクトリで起動
   $(basename "$0") -c ~/projects/myapp      # 指定ディレクトリで前回セッション再開
   $(basename "$0") -b ~/projects/myapp      # イメージ再ビルドして起動
+  $(basename "$0") -e IBM_QUANTUM_TOKEN=xxx  # 環境変数を渡して起動
 
 Security:
   - ホスト全体はマウントしない (情報漏洩防止)
@@ -54,6 +56,7 @@ CONTINUE_SESSION=false
 USE_GPU=false
 MOUNT_BOLTZ=false
 EXTRA_RO_MOUNTS=()
+ENV_OPTS=()
 WORKSPACE_DIR=""
 
 while [[ $# -gt 0 ]]; do
@@ -65,6 +68,10 @@ while [[ $# -gt 0 ]]; do
         -c|--continue)
             CONTINUE_SESSION=true
             shift
+            ;;
+        -e|--env)
+            ENV_OPTS+=(-e "$2")
+            shift 2
             ;;
         -r|--ro-dir)
             EXTRA_RO_MOUNTS+=("$2")
@@ -109,6 +116,11 @@ echo "  Memory (会話履歴): $WORKSPACE_DIR/.claude-memory"
 if [[ "$CONTINUE_SESSION" == true ]]; then
     echo "  Mode: 前回セッション再開 (-c)"
 fi
+for envfile in "$HOME/.safeclaude.env" "$WORKSPACE_DIR/.env"; do
+    if [[ -f "$envfile" ]]; then
+        echo "  Env: $envfile"
+    fi
+done
 if [[ ${#EXTRA_RO_MOUNTS[@]} -gt 0 ]]; then
     for d in "${EXTRA_RO_MOUNTS[@]}"; do
         echo "  ReadOnly: $d"
@@ -140,7 +152,7 @@ for ro_dir in "${EXTRA_RO_MOUNTS[@]:-}"; do
 done
 
 # Pass through API key
-ENV_OPTS=()
+# ENV_OPTS は引数パース前に定義済み（-e フラグで追記されるため再初期化しない）
 #if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
 #   ENV_OPTS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
 #fi
@@ -149,6 +161,18 @@ ENV_OPTS=()
 if [[ "$CONTINUE_SESSION" == true ]]; then
     ENV_OPTS+=(-e "CLAUDE_CONTINUE=1")
 fi
+
+# .env ファイルから環境変数を自動読み込み
+# ~/.safeclaude.env: マシン共通の秘密情報（APIトークン等）
+# $WORKSPACE_DIR/.env: プロジェクト固有の環境変数
+for envfile in "$HOME/.safeclaude.env" "$WORKSPACE_DIR/.env"; do
+    if [[ -f "$envfile" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            ENV_OPTS+=(-e "$line")
+        done < "$envfile"
+    fi
+done
 
 # .credentials.json がなければ空ファイルを作成（コンテナ内のログイン結果を永続化するため）
 if [[ ! -f "$HOME/.claude/.credentials.json" ]]; then
