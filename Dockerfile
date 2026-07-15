@@ -52,7 +52,8 @@ RUN mkdir -p /home/claude/.claude/plugins/marketplaces && \
     git clone https://github.com/anthropics/claude-plugins-official.git \
     /home/claude/.claude/plugins/marketplaces/claude-plugins-official
 
-RUN echo '{"claude-plugins-official":{"url":"https://github.com/anthropics/claude-plugins-official","installLocation":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official"}}' \
+# 変更後（v2.1.209対応スキーマ）
+RUN echo '{"claude-plugins-official":{"source":{"source":"github","repo":"anthropics/claude-plugins-official"},"installLocation":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official","lastUpdated":"2026-07-01T00:00:00.000Z"}}' \
     > /home/claude/.claude/plugins/known_marketplaces.json
 
 RUN echo '{"version":2,"plugins":{"discord@claude-plugins-official":[{"scope":"user","installPath":"/home/claude/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/discord","version":"0.0.4","installedAt":"2026-01-01T00:00:00.000Z","lastUpdated":"2026-01-01T00:00:00.000Z"}]}}' \
