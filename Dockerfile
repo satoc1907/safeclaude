@@ -25,9 +25,23 @@ ARG CLAUDE_UID=501
 RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u ${CLAUDE_UID} claude
 
 # entrypoint スクリプトを直接生成
+# - 起動時: 永続化ディレクトリから認証情報を復元
+# - 終了時: trap で認証情報を永続化ディレクトリに保存（コピーアウト）
 # - .claude.json からホスト固有の情報を除去
 # - CLAUDE_CONTINUE=1 なら -c フラグを追加して前回セッションを再開
 RUN printf '#!/bin/bash\n\
+# 起動時: 永続化ディレクトリから認証情報を復元\n\
+if [ -f /home/claude/.claude-auth/.credentials.json ]; then\n\
+  cp /home/claude/.claude-auth/.credentials.json /home/claude/.claude/.credentials.json\n\
+fi\n\
+\n\
+# 終了時: 認証情報を永続化ディレクトリに保存\n\
+persist_credentials() {\n\
+  cp /home/claude/.claude/.credentials.json /home/claude/.claude-auth/.credentials.json 2>/dev/null\n\
+}\n\
+trap persist_credentials EXIT INT TERM\n\
+\n\
+# .claude.json のフィルタリング（既存処理そのまま）\n\
 if [ -f /tmp/.claude.json.host ]; then\n\
   node -e "\n\
     const data = JSON.parse(require(\"fs\").readFileSync(\"/tmp/.claude.json.host\", \"utf8\"));\n\
@@ -36,11 +50,14 @@ if [ -f /tmp/.claude.json.host ]; then\n\
     require(\"fs\").writeFileSync(\"/home/claude/.claude.json\", JSON.stringify(data, null, 2));\n\
   " 2>/dev/null || cp /tmp/.claude.json.host /home/claude/.claude.json\n\
 fi\n\
+\n\
 CONTINUE_FLAG=""\n\
 if [ "${CLAUDE_CONTINUE:-}" = "1" ]; then\n\
   CONTINUE_FLAG="-c"\n\
 fi\n\
-exec claude $CONTINUE_FLAG --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official\n' \
+\n\
+# exec しない（trap を効かせるため）。claude 終了後に persist_credentials が実行される\n\
+claude $CONTINUE_FLAG --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official\n' \
     > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 # rtk テレメトリ無効化

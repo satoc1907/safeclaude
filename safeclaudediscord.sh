@@ -146,18 +146,21 @@ if [[ "$CONTINUE_SESSION" == true ]]; then
     ENV_OPTS+=(-e "CLAUDE_CONTINUE=1")
 fi
 
-# .credentials.json がなければ空ファイルを作成（コンテナ内のログイン結果を永続化するため）
-if [[ ! -f "$HOME/.claude/.credentials.json" ]]; then
-    touch "$HOME/.claude/.credentials.json"
+# 認証情報永続化用ディレクトリ
+# 単一ファイルのbind mountだとClaude Codeのatomic rename書き込みが失敗するため、
+# ディレクトリごとマウントし、entrypoint.shがコピーイン/コピーアウトする
+AUTH_DIR="$HOME/.claude/safeclaude-auth"
+mkdir -p "$AUTH_DIR"
+# 初回のみ: ホストに既存の認証情報があれば引き継ぐ
+if [[ -f "$HOME/.claude/.credentials.json" && ! -f "$AUTH_DIR/.credentials.json" ]]; then
+    cp "$HOME/.claude/.credentials.json" "$AUTH_DIR/.credentials.json"
 fi
 
 # Pass through Claude config if it exists
 # pluginsはコンテナ内で管理するためマウントから除外
 CONFIG_MOUNTS=()
-# 認証情報のみ明示的にマウント
-if [[ -f "$HOME/.claude/.credentials.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/.credentials.json:/home/claude/.claude/.credentials.json")
-fi
+# 認証情報ディレクトリをマウント
+CONFIG_MOUNTS+=(-v "$AUTH_DIR:/home/claude/.claude-auth")
 if [[ -f "$HOME/.claude/config.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/config.json:/home/claude/.claude/config.json:ro")
 fi
