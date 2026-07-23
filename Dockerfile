@@ -25,31 +25,38 @@ ARG CLAUDE_UID=501
 RUN userdel -r node 2>/dev/null; useradd -m -s /bin/bash -u ${CLAUDE_UID} claude
 
 # entrypoint スクリプトを直接生成
-# - 起動時: 永続化ディレクトリから認証情報を復元
-# - 終了時: trap で認証情報を永続化ディレクトリに保存（コピーアウト）
-# - .claude.json からホスト固有の情報を除去
+# - 起動時: 永続化ディレクトリから認証情報と .claude.json を復元
+# - 終了時: trap で認証情報と .claude.json を永続化ディレクトリに保存（コピーアウト）
+# - .claude.json はログイン判定の oauthAccount を含むため永続化必須
+# - 保存/復元の両方で projects / githubRepoPaths を除去（ホスト固有パスによる起動ブロック防止）
 # - CLAUDE_CONTINUE=1 なら -c フラグを追加して前回セッションを再開
 RUN printf '#!/bin/bash\n\
-# 起動時: 永続化ディレクトリから認証情報を復元\n\
+# 起動時: 永続化ディレクトリから認証情報と .claude.json を復元\n\
 if [ -f /home/claude/.claude-auth/.credentials.json ]; then\n\
   cp /home/claude/.claude-auth/.credentials.json /home/claude/.claude/.credentials.json\n\
 fi\n\
-\n\
-# 終了時: 認証情報を永続化ディレクトリに保存\n\
-persist_credentials() {\n\
-  cp /home/claude/.claude/.credentials.json /home/claude/.claude-auth/.credentials.json 2>/dev/null\n\
-}\n\
-trap persist_credentials EXIT INT TERM\n\
-\n\
-# .claude.json のフィルタリング（既存処理そのまま）\n\
-if [ -f /tmp/.claude.json.host ]; then\n\
+if [ -f /home/claude/.claude-auth/claude.json ]; then\n\
+  cp /home/claude/.claude-auth/claude.json /home/claude/.claude.json\n\
+elif [ -f /tmp/.claude.json.host ]; then\n\
   node -e "\n\
-    const data = JSON.parse(require(\"fs\").readFileSync(\"/tmp/.claude.json.host\", \"utf8\"));\n\
+    const data = JSON.parse(require(\\"fs\\").readFileSync(\\"/tmp/.claude.json.host\\", \\"utf8\\"));\n\
     delete data.projects;\n\
     delete data.githubRepoPaths;\n\
-    require(\"fs\").writeFileSync(\"/home/claude/.claude.json\", JSON.stringify(data, null, 2));\n\
+    require(\\"fs\\").writeFileSync(\\"/home/claude/.claude.json\\", JSON.stringify(data, null, 2));\n\
   " 2>/dev/null || cp /tmp/.claude.json.host /home/claude/.claude.json\n\
 fi\n\
+\n\
+# 終了時: 認証情報と .claude.json を永続化ディレクトリに保存\n\
+persist_credentials() {\n\
+  cp /home/claude/.claude/.credentials.json /home/claude/.claude-auth/.credentials.json 2>/dev/null\n\
+  node -e "\n\
+    const data = JSON.parse(require(\\"fs\\").readFileSync(\\"/home/claude/.claude.json\\", \\"utf8\\"));\n\
+    delete data.projects;\n\
+    delete data.githubRepoPaths;\n\
+    require(\\"fs\\").writeFileSync(\\"/home/claude/.claude-auth/claude.json\\", JSON.stringify(data, null, 2));\n\
+  " 2>/dev/null\n\
+}\n\
+trap persist_credentials EXIT INT TERM\n\
 \n\
 CONTINUE_FLAG=""\n\
 if [ "${CLAUDE_CONTINUE:-}" = "1" ]; then\n\
