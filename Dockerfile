@@ -98,6 +98,12 @@ COPY --from=rtk-builder /usr/local/cargo/bin/rtk /home/claude/.local/bin/rtk
 ENV PATH="/home/claude/.local/bin:$PATH"
 RUN rtk init -g --auto-patch
 
+# installed_plugins.json だけではプラグインが disabled 扱いになるため、明示的に有効化する
+RUN node -e "const f='/home/claude/.claude/settings.json',fs=require('fs'); \
+    const d=fs.existsSync(f)?JSON.parse(fs.readFileSync(f,'utf8')):{}; \
+    d.enabledPlugins={...(d.enabledPlugins||{}),'discord@claude-plugins-official':true}; \
+    fs.writeFileSync(f,JSON.stringify(d,null,2))"
+
 WORKDIR /workspace
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

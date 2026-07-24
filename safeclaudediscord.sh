@@ -164,16 +164,31 @@ CONFIG_MOUNTS+=(-v "$AUTH_DIR:/home/claude/.claude-auth")
 if [[ -f "$HOME/.claude/config.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/config.json:/home/claude/.claude/config.json:ro")
 fi
+# settings.json は enabledPlugins を含む場合のみマウントする
+# （含まない settings.json でイメージ内設定を上書きすると、プラグインが無効化されるため）
 if [[ -f "$HOME/.claude/settings.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
+    if grep -q "enabledPlugins" "$HOME/.claude/settings.json"; then
+        CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
+    else
+        echo "⚠️  ~/.claude/settings.json に enabledPlugins が無いためマウントをスキップします"
+        echo "    （イメージ内蔵のプラグイン設定を使用します）"
+    fi
 fi
 # STATUS.md 更新規約をユーザーメモリとして注入（全セッション共通）
 if [[ -f "$SCRIPT_DIR/claude-global.md" ]]; then
     CONFIG_MOUNTS+=(-v "$SCRIPT_DIR/claude-global.md:/home/claude/.claude/CLAUDE.md:ro")
 fi
 
-if [[ -d "$HOME/.claude/channels" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
+# Discord channel の状態（bot token / allowlist）を永続化
+# 条件付きマウントだと、コンテナ内で /discord:configure しても --rm で設定が消え、
+# Bot がトークン無しで即終了する（メッセージが届かない）ため、無条件で作成してマウントする
+CHANNELS_DIR="$HOME/.claude/channels"
+mkdir -p "$CHANNELS_DIR"
+CONFIG_MOUNTS+=(-v "$CHANNELS_DIR:/home/claude/.claude/channels")
+if [[ ! -f "$CHANNELS_DIR/discord/.env" ]]; then
+    echo "⚠️  Discord未設定です。起動後に /discord:configure <BOT_TOKEN> を実行してください"
+    echo "    設定は $CHANNELS_DIR に永続化されます"
+    echo ""
 fi
 # .claude.json は直接マウントするとホスト固有パス情報でClaude Codeの起動がブロックされるため、
 # 一時パスにread-onlyでマウントし、entrypoint.sh がフィルタしてからコピーする
