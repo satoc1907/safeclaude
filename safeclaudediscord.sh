@@ -146,31 +146,47 @@ if [[ "$CONTINUE_SESSION" == true ]]; then
     ENV_OPTS+=(-e "CLAUDE_CONTINUE=1")
 fi
 
-# .credentials.json がなければ空ファイルを作成（コンテナ内のログイン結果を永続化するため）
-if [[ ! -f "$HOME/.claude/.credentials.json" ]]; then
-    touch "$HOME/.claude/.credentials.json"
+# 認証情報永続化用ディレクトリ
+# 単一ファイルのbind mountだとClaude Codeのatomic rename書き込みが失敗するため、
+# ディレクトリごとマウントし、entrypoint.shがコピーイン/コピーアウトする
+AUTH_DIR="$HOME/.claude/safeclaude-auth"
+mkdir -p "$AUTH_DIR"
+# 初回のみ: ホストに既存の認証情報があれば引き継ぐ
+if [[ -f "$HOME/.claude/.credentials.json" && ! -f "$AUTH_DIR/.credentials.json" ]]; then
+    cp "$HOME/.claude/.credentials.json" "$AUTH_DIR/.credentials.json"
 fi
 
 # Pass through Claude config if it exists
 # pluginsはコンテナ内で管理するためマウントから除外
 CONFIG_MOUNTS=()
-# 認証情報のみ明示的にマウント
-if [[ -f "$HOME/.claude/.credentials.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/.credentials.json:/home/claude/.claude/.credentials.json")
-fi
+# 認証情報ディレクトリをマウント
+CONFIG_MOUNTS+=(-v "$AUTH_DIR:/home/claude/.claude-auth")
 if [[ -f "$HOME/.claude/config.json" ]]; then
     CONFIG_MOUNTS+=(-v "$HOME/.claude/config.json:/home/claude/.claude/config.json:ro")
 fi
+# settings.json は enabledPlugins を含む場合のみマウントする
+# （含まない settings.json でイメージ内設定を上書きすると、プラグインが無効化されるため）
 if [[ -f "$HOME/.claude/settings.json" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
+    if grep -q "enabledPlugins" "$HOME/.claude/settings.json"; then
+        CONFIG_MOUNTS+=(-v "$HOME/.claude/settings.json:/home/claude/.claude/settings.json:ro")
+    else
+        echo "⚠️  ~/.claude/settings.json に enabledPlugins が無いためマウントをスキップします"
+        echo "    （イメージ内蔵のプラグイン設定を使用します）"
+    fi
 fi
 # STATUS.md 更新規約をユーザーメモリとして注入（全セッション共通）
 if [[ -f "$SCRIPT_DIR/claude-global.md" ]]; then
     CONFIG_MOUNTS+=(-v "$SCRIPT_DIR/claude-global.md:/home/claude/.claude/CLAUDE.md:ro")
 fi
 
-if [[ -d "$HOME/.claude/channels" ]]; then
-    CONFIG_MOUNTS+=(-v "$HOME/.claude/channels:/home/claude/.claude/channels")
+# Discord channel の状態（bot token / allowlist）を永続化
+# コンテナ内で /discord:configure しても消えないよう、無条件でマウントする
+CHANNELS_DIR="$HOME/.claude/channels"
+mkdir -p "$CHANNELS_DIR"
+CONFIG_MOUNTS+=(-v "$CHANNELS_DIR:/home/claude/.claude/channels")
+if [[ ! -f "$CHANNELS_DIR/discord/.env" ]]; then
+    echo "⚠️  Discord未設定です。起動後に /discord:configure <BOT_TOKEN> を実行してください"
+    echo "    （設定は $CHANNELS_DIR に永続化されます）"
 fi
 # .claude.json は直接マウントするとホスト固有パス情報でClaude Codeの起動がブロックされるため、
 # 一時パスにread-onlyでマウントし、entrypoint.sh がフィルタしてからコピーする
